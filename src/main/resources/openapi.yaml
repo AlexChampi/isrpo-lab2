@@ -1,0 +1,292 @@
+openapi: 3.0.3
+
+info:
+  title: Experimentation Platform API
+  description: API for A/B testing experiments and feature flags
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8080
+
+tags:
+  - name: Experiments
+    description: A/B testing experiments
+  - name: FeatureFlags
+    description: Feature flag management
+
+paths:
+
+  /experiments:
+
+    get:
+      tags:
+        - Experiments
+      summary: List experiments
+      operationId: experimentsGet
+      responses:
+        "200":
+          description: Experiments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Experiment"
+
+    post:
+      tags:
+        - Experiments
+      summary: Create experiment
+      operationId: experimentsPost
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExperimentCreate"
+      responses:
+        "200":
+          description: Created experiment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Experiment"
+
+
+  /experiments/{id}:
+
+    get:
+      tags:
+        - Experiments
+      summary: Get experiment
+      operationId: experimentsIdGet
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Experiment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Experiment"
+
+
+  /experiments/{id}/start:
+
+    post:
+      tags:
+        - Experiments
+      summary: Start experiment
+      operationId: experimentsIdStartPost
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Experiment started
+
+
+  /experiments/{id}/stop:
+
+    post:
+      tags:
+        - Experiments
+      summary: Stop experiment
+      operationId: experimentsIdStopPost
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Experiment stopped
+
+
+  /experiments/{id}/assign:
+
+    get:
+      tags:
+        - Experiments
+      summary: Assign variant
+      operationId: experimentsIdAssignGet
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Variant
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Variant"
+
+
+
+  /feature-flags:
+
+    get:
+      tags:
+        - FeatureFlags
+      summary: List feature flags
+      operationId: featureFlagsGet
+      responses:
+        "200":
+          description: Flags
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FeatureFlag"
+
+    post:
+      tags:
+        - FeatureFlags
+      summary: Create feature flag
+      operationId: featureFlagsPost
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FeatureFlagCreate"
+      responses:
+        "200":
+          description: Created flag
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeatureFlag"
+
+
+  /feature-flags/{id}:
+
+    get:
+      tags:
+        - FeatureFlags
+      summary: Get flag
+      operationId: featureFlagsIdGet
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Flag
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeatureFlag"
+
+
+  /feature-flags/{id}/enable:
+
+    post:
+      tags:
+        - FeatureFlags
+      summary: Enable feature flag
+      operationId: featureFlagsIdEnablePost
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Flag enabled
+
+
+  /feature-flags/{id}/disable:
+
+    post:
+      tags:
+        - FeatureFlags
+      summary: Disable feature flag
+      operationId: featureFlagsIdDisablePost
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Flag disabled
+
+
+
+components:
+
+  schemas:
+
+    Experiment:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        status:
+          type: string
+        variants:
+          type: array
+          items:
+            $ref: "#/components/schemas/Variant"
+
+
+    ExperimentCreate:
+      type: object
+      required:
+        - name
+        - variants
+      properties:
+        name:
+          type: string
+        variants:
+          type: array
+          items:
+            $ref: "#/components/schemas/Variant"
+
+
+    Variant:
+      type: object
+      properties:
+        name:
+          type: string
+        weight:
+          type: integer
+
+
+    FeatureFlag:
+      type: object
+      properties:
+        id:
+          type: integer
+        key:
+          type: string
+        enabled:
+          type: boolean
+
+
+    FeatureFlagCreate:
+      type: object
+      required:
+        - key
+      properties:
+        key:
+          type: string
