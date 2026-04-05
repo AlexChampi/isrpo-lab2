@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration debug="true">
+
+    <statusListener class="ch.qos.logback.core.status.OnConsoleStatusListener" />
+
+    <!-- Консольный вывод -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Loki appender -->
+    <appender name="LOKI" class="com.github.loki4j.logback.Loki4jAppender">
+        <batchMaxItems>100</batchMaxItems>
+        <batchTimeoutMs>5000</batchTimeoutMs>
+        <http>
+            <url>http://${LOKI_HOST:-localhost}:3100/loki/api/v1/push</url>
+        </http>
+        <format>
+            <label>
+                <pattern>application=isrpo-lab2,host=${HOSTNAME},level=%level</pattern>
+            </label>
+            <message>
+                <pattern>
+                    {"timestamp":"%d{yyyy-MM-dd'T'HH:mm:ss.SSS}","level":"%level","logger":"%logger{36}","thread":"%thread","message":"%msg","mdc":"%mdc"}
+                </pattern>
+            </message>
+            <sortByTime>true</sortByTime>
+        </format>
+    </appender>
+
+    <logger name="ru.itmo.isrpo" level="DEBUG" />
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE" />
+        <appender-ref ref="LOKI" />
+    </root>
+
+</configuration>

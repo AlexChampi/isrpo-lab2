@@ -1,3 +1,80 @@
+# Лабораторная работа №4
+## Экспорт логов, сбор, визуализация, язык запросов
+
+Расширение сервиса из лабораторной работы №3 централизованным сбором логов.
+
+---
+
+## Стек логирования
+
+| Компонент       | Технология               | Назначение                            |
+|-----------------|--------------------------|---------------------------------------|
+| Логирование     | SLF4J + Logback          | Генерация логов в коде                |
+| Экспорт         | Loki4j Logback Appender  | Push логов из приложения в Loki       |
+| Хранение        | Grafana Loki             | Агрегация и хранение логов            |
+| Визуализация    | Grafana                  | Дашборды, просмотр логов              |
+| Язык запросов   | LogQL                    | Запросы к Loki                        |
+
+---
+
+## Что логируется
+
+### Experiments
+- Создание эксперимента — `INFO` с именем и количеством вариантов
+- Запуск / остановка — `INFO` со статусом
+- Назначение варианта — `INFO` с MDC-контекстом (experimentId, experimentName, variant)
+- Эксперимент не найден — `WARN`
+- Нет вариантов при назначении — `ERROR`
+
+### Feature Flags
+- Создание флага — `INFO` с ключом
+- Включение / отключение — `INFO` с ключом и действием
+- Проверка флага — `DEBUG` с текущим состоянием
+- Флаг не найден — `WARN`
+
+### Формат логов
+
+Логи отправляются в Loki в JSON-формате:
+```json
+{
+  "timestamp": "2025-01-15T12:00:00.123",
+  "level": "INFO",
+  "logger": "r.i.i.c.ExperimentController",
+  "thread": "http-nio-8080-exec-1",
+  "message": "Variant assigned: experiment='button_color_test' variant='blue' duration_us=142",
+  "mdc": "experimentId=1, experimentName=button_color_test, variant=blue"
+}
+```
+
+Labels в Loki: `application`, `host`, `level`.
+
+---
+
+## Запуск
+
+## Все логи
+![all_logs.png](screenshots/all_logs.png)
+
+## С уровнем ERROR и WARN
+![err_and_warns.png](screenshots/err_and_warns.png)
+
+## Число 404 относительно всех запросов
+![not_found.png](screenshots/not_found.png)
+
+![not_found_2.png](screenshots/not_found_2.png)
+---
+
+## Дашборд логов в Grafana
+
+Панели:
+1. **All Application Logs** — все логи приложения (logs panel)
+2. **Errors & Warnings** — только WARN и ERROR уровни
+3. **Log Volume by Level** — гистограмма объёма логов по уровням
+4. **Variant Assignment Logs** — логи назначений вариантов
+5. **Feature Flag Toggle Logs** — логи переключений флагов
+6. **Experiment Lifecycle Logs** — создание, старт, остановка экспериментов
+7. **Assignment Rate** — график скорости назначений (логов/мин)
+
 # Лабораторная работа №3
 ## Метрики для платформы A/B тестирования
 

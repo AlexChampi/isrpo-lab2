@@ -1,5 +1,8 @@
 package ru.itmo.isrpo.isrpolab2.controller;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import ru.itmo.isrpo.api.FeatureFlagsApi;
 import ru.itmo.isrpo.model.FeatureFlag;
 import ru.itmo.isrpo.model.FeatureFlagCreate;
@@ -13,6 +16,8 @@ import java.util.*;
 @RestController
 public class FeatureFlagsController implements FeatureFlagsApi {
 
+    private static final Logger log = LoggerFactory.getLogger(FeatureFlagsController.class);
+
     private final Map<Integer, FeatureFlag> flags = new HashMap<>();
     private final ExperimentMetrics metrics;
     private int idCounter = 1;
@@ -23,6 +28,7 @@ public class FeatureFlagsController implements FeatureFlagsApi {
 
     @Override
     public ResponseEntity<List<FeatureFlag>> featureFlagsGet() {
+        log.info("Listing all feature flags, total count: {}", flags.size());
         return ResponseEntity.ok(new ArrayList<>(flags.values()));
     }
 
@@ -37,6 +43,8 @@ public class FeatureFlagsController implements FeatureFlagsApi {
 
         flags.put(idCounter, flag);
 
+        log.info("Created feature flag id={} key='{}'", idCounter, featureFlagCreate.getKey());
+
         idCounter++;
 
         metrics.recordFlagCreated();
@@ -50,8 +58,15 @@ public class FeatureFlagsController implements FeatureFlagsApi {
         FeatureFlag flag = flags.get(id);
 
         if (flag == null) {
+            log.warn("Feature flag not found: id={}", id);
             return ResponseEntity.notFound().build();
         }
+
+        MDC.put("flagKey", flag.getKey());
+        log.debug("Feature flag checked: id={} key='{}' enabled={}", id, flag.getKey(), flag.getEnabled());
+        MDC.clear();
+
+        metrics.recordFlagCheck(flag.getKey());
 
         return ResponseEntity.ok(flag);
     }
@@ -62,11 +77,14 @@ public class FeatureFlagsController implements FeatureFlagsApi {
         FeatureFlag flag = flags.get(id);
 
         if (flag == null) {
+            log.warn("Cannot enable feature flag: id={} not found", id);
             return ResponseEntity.notFound().build();
         }
 
         flag.setEnabled(true);
         metrics.recordFlagToggle(flag.getKey(), true);
+
+        log.info("Feature flag ENABLED: id={} key='{}'", id, flag.getKey());
 
         return ResponseEntity.ok().build();
     }
@@ -77,11 +95,14 @@ public class FeatureFlagsController implements FeatureFlagsApi {
         FeatureFlag flag = flags.get(id);
 
         if (flag == null) {
+            log.warn("Cannot disable feature flag: id={} not found", id);
             return ResponseEntity.notFound().build();
         }
 
         flag.setEnabled(false);
         metrics.recordFlagToggle(flag.getKey(), false);
+
+        log.info("Feature flag DISABLED: id={} key='{}'", id, flag.getKey());
 
         return ResponseEntity.ok().build();
     }
