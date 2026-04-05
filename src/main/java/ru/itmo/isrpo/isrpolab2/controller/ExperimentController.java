@@ -6,6 +6,7 @@ import ru.itmo.isrpo.api.ExperimentsApi;
 import ru.itmo.isrpo.model.Experiment;
 import ru.itmo.isrpo.model.ExperimentCreate;
 import ru.itmo.isrpo.model.Variant;
+import ru.itmo.isrpo.isrpolab2.metrics.ExperimentMetrics;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -18,7 +19,12 @@ public class ExperimentController implements ExperimentsApi {
 
     private final Map<Integer, Experiment> experiments = new HashMap<>();
     private final Random random = new Random();
+    private final ExperimentMetrics metrics;
     private int idCounter = 1;
+
+    public ExperimentController(ExperimentMetrics metrics) {
+        this.metrics = metrics;
+    }
 
     @Override
     public ResponseEntity<List<Experiment>> experimentsGet() {
@@ -38,6 +44,8 @@ public class ExperimentController implements ExperimentsApi {
         experiments.put(idCounter, experiment);
 
         idCounter++;
+
+        metrics.recordExperimentCreated();
 
         return ResponseEntity.ok(experiment);
     }
@@ -64,6 +72,7 @@ public class ExperimentController implements ExperimentsApi {
         }
 
         experiment.setStatus("RUNNING");
+        metrics.recordExperimentStarted();
 
         return ResponseEntity.ok().build();
     }
@@ -78,6 +87,7 @@ public class ExperimentController implements ExperimentsApi {
         }
 
         experiment.setStatus("STOPPED");
+        metrics.recordExperimentStopped();
 
         return ResponseEntity.ok().build();
     }
@@ -98,6 +108,8 @@ public class ExperimentController implements ExperimentsApi {
         }
 
         Variant variant = variants.get(random.nextInt(variants.size()));
+
+        metrics.recordAssignment(experiment.getName(), variant.getName());
 
         return ResponseEntity.ok(variant);
     }

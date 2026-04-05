@@ -1,3 +1,126 @@
+# Лабораторная работа №3
+## Метрики для платформы A/B тестирования
+
+Расширение сервиса из лабораторной работы №2 метриками, сбором в TSDB и визуализацией.
+
+---
+
+## Стек мониторинга
+
+| Компонент        | Технология         | Назначение                       |
+|------------------|--------------------|----------------------------------|
+| Инструментация   | Micrometer         | Сбор метрик в коде               |
+| Экспорт          | Spring Boot Actuator + Prometheus exporter | Отдача метрик в формате Prometheus |
+| TSDB             | Prometheus         | Хранение временных рядов         |
+| Визуализация     | Grafana            | Дашборды, графики                |
+| Язык запросов    | PromQL             | Запросы к Prometheus             |
+
+---
+
+## Продуктовые метрики
+
+### `experiment.assignments.total` (Counter) — **главная продуктовая метрика**
+Считает, сколько раз каждый вариант каждого эксперимента был назначен пользователю.
+Теги: `experiment`, `variant`.
+
+### `experiments.created.total` (Counter)
+Общее число созданных экспериментов.
+
+### `experiments.active.count` (Gauge)
+Количество экспериментов в статусе RUNNING прямо сейчас.
+
+### `feature_flags.toggles.total` (Counter)
+Количество переключений feature flags. Теги: `flag`, `action`.
+
+### `feature_flags.created.total` (Counter)
+Общее число созданных feature flags.
+
+### `feature_flags.enabled.count` (Gauge)
+Количество включённых feature flags прямо сейчас.
+
+---
+
+## Стандартные метрики (через Actuator)
+
+Кроме продуктовых метрик автоматически собираются:
+- HTTP-метрики (количество запросов, время ответа, статус-коды)
+- JVM-метрики (heap, threads, GC)
+- System-метрики (CPU, uptime)
+
+---
+
+## Запуск
+
+```bash
+docker-compose up --build
+```
+
+| Сервис      | URL                          |
+|-------------|------------------------------|
+| Приложение  | http://localhost:8080         |
+| Swagger UI  | http://localhost:8080/swagger-ui.html |
+| Prometheus  | http://localhost:9090         |
+| Grafana     | http://localhost:3000 (admin/admin) |
+
+---
+
+---
+
+## Примеры PromQL запросов
+
+Полный список — в файле [PROMQL_EXAMPLES.md](PROMQL_EXAMPLES.md).
+
+Быстрые примеры:
+
+```promql
+# Скорость назначений вариантов
+rate(experiment_assignments_total[1m])
+
+# Распределение по вариантам
+sum by (variant) (experiment_assignments_total{experiment="button_color_test"})
+
+# Количество активных экспериментов
+experiments_active_count
+
+# 95-й перцентиль времени ответа
+histogram_quantile(0.95, rate(http_server_requests_seconds_bucket[1m]))
+```
+
+---
+
+## Дашборд Grafana
+
+Дашборд подгружается автоматически при запуске через provisioning.
+
+![grafana_1.png](screenshots/grafana_1.png)
+![grafana_2.png](screenshots/grafana_2.png)
+![grafana_3.png](screenshots/grafana_3.png)
+Панели:
+1. **Variant Assignments** — rate назначений вариантов по экспериментам (timeseries)
+2. **Active Experiments** — gauge текущих запущенных экспериментов (stat)
+3. **Enabled Feature Flags** — gauge включённых флагов (stat)
+4. **Feature Flag Toggles** — rate переключений (timeseries)
+5. **HTTP Request Rate** — запросы в секунду по эндпоинтам (timeseries)
+6. **HTTP Response Time p95/p50** — перцентили времени ответа (timeseries)
+7. **JVM Heap Memory** — использование памяти (timeseries)
+8. **JVM Threads** — количество потоков (timeseries)
+9. **Assignments per Experiment** — кумулятивная гистограмма назначений (barchart)
+
+---
+
+## Эндпоинт метрик
+
+После запуска метрики доступны по адресу:
+
+```
+http://localhost:8080/actuator/prometheus
+```
+
+Пример вывода:
+
+![prometheus.png](screenshots/prometheus.png)
+
+
 # Лабораторная работа №2  
 ## Платформа для A/B тестирования
 
