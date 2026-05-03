@@ -34,19 +34,14 @@ public class FeatureFlagsController implements FeatureFlagsApi {
 
     @Override
     public ResponseEntity<FeatureFlag> featureFlagsPost(FeatureFlagCreate featureFlagCreate) {
-
         FeatureFlag flag = new FeatureFlag();
-
         flag.setId(idCounter);
         flag.setKey(featureFlagCreate.getKey());
         flag.setEnabled(false);
 
         flags.put(idCounter, flag);
-
         log.info("Created feature flag id={} key='{}'", idCounter, featureFlagCreate.getKey());
-
         idCounter++;
-
         metrics.recordFlagCreated();
 
         return ResponseEntity.ok(flag);
@@ -54,56 +49,41 @@ public class FeatureFlagsController implements FeatureFlagsApi {
 
     @Override
     public ResponseEntity<FeatureFlag> featureFlagsIdGet(Integer id) {
-
         FeatureFlag flag = flags.get(id);
-
         if (flag == null) {
             log.warn("Feature flag not found: id={}", id);
             return ResponseEntity.notFound().build();
         }
-
         MDC.put("flagKey", flag.getKey());
         log.debug("Feature flag checked: id={} key='{}' enabled={}", id, flag.getKey(), flag.getEnabled());
         MDC.clear();
-
         metrics.recordFlagCheck(flag.getKey());
-
         return ResponseEntity.ok(flag);
     }
 
     @Override
     public ResponseEntity<Void> featureFlagsIdEnablePost(Integer id) {
-
         FeatureFlag flag = flags.get(id);
-
         if (flag == null) {
             log.warn("Cannot enable feature flag: id={} not found", id);
             return ResponseEntity.notFound().build();
         }
-
         flag.setEnabled(true);
         metrics.recordFlagToggle(flag.getKey(), true);
-
         log.info("Feature flag ENABLED: id={} key='{}'", id, flag.getKey());
-
         return ResponseEntity.ok().build();
     }
 
     @Override
     public ResponseEntity<Void> featureFlagsIdDisablePost(Integer id) {
-
         FeatureFlag flag = flags.get(id);
-
         if (flag == null) {
             log.warn("Cannot disable feature flag: id={} not found", id);
             return ResponseEntity.notFound().build();
         }
-
         flag.setEnabled(false);
         metrics.recordFlagToggle(flag.getKey(), false);
-
         log.info("Feature flag DISABLED: id={} key='{}'", id, flag.getKey());
-
         return ResponseEntity.ok().build();
     }
 }

@@ -1,16 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<configuration debug="true">
+<configuration debug="false">
 
-    <statusListener class="ch.qos.logback.core.status.OnConsoleStatusListener" />
-
-    <!-- Консольный вывод -->
+    <!-- Консольный вывод с traceId/spanId -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} [trace=%X{traceId:-} span=%X{spanId:-}] - %msg%n</pattern>
         </encoder>
     </appender>
 
-    <!-- Loki appender -->
+    <!-- Loki appender — JSON с traceId для корреляции трейсов -->
     <appender name="LOKI" class="com.github.loki4j.logback.Loki4jAppender">
         <batchMaxItems>100</batchMaxItems>
         <batchTimeoutMs>5000</batchTimeoutMs>
@@ -22,8 +20,9 @@
                 <pattern>application=isrpo-lab2,host=${HOSTNAME},level=%level</pattern>
             </label>
             <message>
+                <!-- traceId включён в JSON — Grafana найдёт его и сделает ссылку на трейс в Tempo -->
                 <pattern>
-                    {"timestamp":"%d{yyyy-MM-dd'T'HH:mm:ss.SSS}","level":"%level","logger":"%logger{36}","thread":"%thread","message":"%msg","mdc":"%mdc"}
+                    {"timestamp":"%d{yyyy-MM-dd'T'HH:mm:ss.SSS}","level":"%level","logger":"%logger{36}","thread":"%thread","message":"%msg","traceId":"%X{traceId:-}","spanId":"%X{spanId:-}","mdc":"%mdc"}
                 </pattern>
             </message>
             <sortByTime>true</sortByTime>

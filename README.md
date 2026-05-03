@@ -1,3 +1,108 @@
+# Лабораторная работа №5
+## Распределённая трассировка
+
+Расширение сервиса из лабораторной работы №4 распределённой трассировкой.
+
+---
+
+## Стек трассировки
+
+| Компонент       | Технология                        | Назначение                              |
+|-----------------|-----------------------------------|-----------------------------------------|
+| Инструментация  | Micrometer Tracing + AspectJ      | Генерация спанов в коде                 |
+| Экспорт         | OpenTelemetry OTLP Exporter       | Push трейсов из приложения в Tempo      |
+| Хранение        | Grafana Tempo                     | Агрегация и хранение трейсов            |
+| Визуализация    | Grafana                           | Просмотр трейсов, Service Map           |
+| Язык запросов   | TraceQL                           | Запросы к Tempo                         |
+
+---
+
+## Что трассируется
+
+### Автоматические спаны (Spring Boot Actuator)
+Каждый HTTP-запрос автоматически оборачивается в спан — без дополнительного кода.
+
+### Кастомные спаны (`@NewSpan`)
+- `assign-variant` — вызов сервиса назначения варианта
+- `pick-random-variant` — вложенный спан выбора случайного варианта
+
+### Структура трейса для `GET /experiments/{id}/assign`
+
+```
+GET /experiments/{id}/assign        ← HTTP спан (автоматический)
+  └── assign-variant                ← @NewSpan в AssignService
+        └── pick-random-variant     ← @NewSpan вложенный
+```
+
+---
+
+## Конфигурация
+
+Трейсы отправляются по OTLP HTTP в Tempo:
+```properties
+management.otlp.tracing.endpoint=http://tempo:4318/v1/traces
+management.tracing.sampling.probability=1.0
+```
+
+Семплирование 100% — все запросы трейсируются. В продакшене рекомендуется 0.1–0.5.
+
+---
+
+## Запуск
+
+```bash
+docker-compose up --build
+```
+
+| Сервис     | URL                        |
+|------------|----------------------------|
+| Приложение | http://localhost:8080       |
+| Tempo      | http://localhost:3200       |
+| Grafana    | http://localhost:3000       |
+
+---
+
+## Примеры TraceQL запросов
+
+Полный список — в файле [TRACEQL_EXAMPLES.md](TRACEQL_EXAMPLES.md).
+
+```traceql
+# Все трейсы сервиса
+{ resource.service.name = "isrpo-lab2" }
+
+# Трейсы назначения вариантов
+{ name = "assign-variant" }
+
+# Медленные трейсы
+{ duration > 100ms }
+
+# Ошибочные трейсы
+{ status = error }
+```
+
+---
+
+## Дашборд трассировки в Grafana
+
+Панели:
+1. **Service Map** — граф зависимостей сервисов
+2. **Trace Search** — поиск трейсов по TraceQL
+3. **Slow Traces** — трейсы длительностью > 100ms
+4. **Span Rate** — количество спанов в секунду
+5. **Span Duration p95** — перцентили длительности
+6. **Error Spans** — ошибочные спаны
+
+### Все трейсы
+![all_traces.png](screenshots/all_traces.png)
+
+### Трейс с ошибкой
+![error_trace.png](screenshots/error_trace.png)
+
+### Трейс с вложенными спанами
+![trace_span+1.png](screenshots/trace_span+1.png)
+
+---
+
 # Лабораторная работа №4
 ## Экспорт логов, сбор, визуализация, язык запросов
 
@@ -42,7 +147,8 @@
   "logger": "r.i.i.c.ExperimentController",
   "thread": "http-nio-8080-exec-1",
   "message": "Variant assigned: experiment='button_color_test' variant='blue' duration_us=142",
-  "mdc": "experimentId=1, experimentName=button_color_test, variant=blue"
+  "traceId": "4912281cdb0a557d68576c5ebebebdb",
+  "spanId": "68576c5ebebebdb"
 }
 ```
 
@@ -62,6 +168,7 @@ Labels в Loki: `application`, `host`, `level`.
 ![not_found.png](screenshots/not_found.png)
 
 ![not_found_2.png](screenshots/not_found_2.png)
+
 ---
 
 ## Дашборд логов в Grafana
@@ -74,6 +181,8 @@ Labels в Loki: `application`, `host`, `level`.
 5. **Feature Flag Toggle Logs** — логи переключений флагов
 6. **Experiment Lifecycle Logs** — создание, старт, остановка экспериментов
 7. **Assignment Rate** — график скорости назначений (логов/мин)
+
+---
 
 # Лабораторная работа №3
 ## Метрики для платформы A/B тестирования
@@ -141,13 +250,9 @@ docker-compose up --build
 
 ---
 
----
-
 ## Примеры PromQL запросов
 
 Полный список — в файле [PROMQL_EXAMPLES.md](PROMQL_EXAMPLES.md).
-
-Быстрые примеры:
 
 ```promql
 # Скорость назначений вариантов
@@ -172,6 +277,7 @@ histogram_quantile(0.95, rate(http_server_requests_seconds_bucket[1m]))
 ![grafana_1.png](screenshots/grafana_1.png)
 ![grafana_2.png](screenshots/grafana_2.png)
 ![grafana_3.png](screenshots/grafana_3.png)
+
 Панели:
 1. **Variant Assignments** — rate назначений вариантов по экспериментам (timeseries)
 2. **Active Experiments** — gauge текущих запущенных экспериментов (stat)
@@ -193,12 +299,12 @@ histogram_quantile(0.95, rate(http_server_requests_seconds_bucket[1m]))
 http://localhost:8080/actuator/prometheus
 ```
 
-Пример вывода:
-
 ![prometheus.png](screenshots/prometheus.png)
 
 
-# Лабораторная работа №2  
+---
+
+# Лабораторная работа №2
 ## Платформа для A/B тестирования
 
 REST API сервис для управления **A/B экспериментами** и **feature flags**.
@@ -214,12 +320,6 @@ REST API сервис для управления **A/B эксперимента
 1. Сначала был описан API с помощью **OpenAPI 3.0 спецификации** (`openapi.yaml`)
 2. Затем с помощью **OpenAPI Generator** были сгенерированы интерфейсы для Spring
 3. После этого была написана реализация этих интерфейсов с использованием **Spring Boot**
-
-Такой подход позволяет разделить:
-
-- контракт API
-- реализацию сервиса
-- документацию
 
 ---
 
@@ -237,62 +337,35 @@ REST API сервис для управления **A/B эксперимента
 # Структура проекта
 
 ```
-
 src
 ├── main
-│ ├── java
-│ │ └── ru.itmo.isrpo
-│ │ ├── controller
-│ │ │ ├── ExperimentsController.java
-│ │ │ └── FeatureFlagsController.java
-│ │
-│ └── resources
-│
+│   ├── java
+│   │   └── ru.itmo.isrpo
+│   │       ├── controller
+│   │       │   ├── ExperimentsController.java
+│   │       │   └── FeatureFlagsController.java
+│   │       └── service
+│   │           └── AssignService.java
+│   └── resources
+
 openapi.yaml
-
 build/generated
-
-```
-
-Сгенерированные классы:
-
-```
-
-ru.itmo.isrpo.api
-├── ExperimentsApi
-└── FeatureFlagsApi
-
-ru.itmo.isrpo.model
-├── Experiment
-├── ExperimentCreate
-├── Variant
-├── FeatureFlag
-└── FeatureFlagCreate
-
 ```
 
 ---
 
 # API сервиса
 
-Платформа содержит два основных модуля:
-
 ## Experiments (A/B эксперименты)
 
-Позволяет управлять экспериментами.
-
-Эндпоинты:
-
 ```
-
-GET /experiments
+GET  /experiments
 POST /experiments
-GET /experiments/{id}
+GET  /experiments/{id}
 POST /experiments/{id}/start
 POST /experiments/{id}/stop
-GET /experiments/{id}/assign
-
-````
+GET  /experiments/{id}/assign
+```
 
 Пример эксперимента:
 
@@ -304,24 +377,18 @@ GET /experiments/{id}/assign
     { "name": "red", "weight": 50 }
   ]
 }
-````
+```
 
 ---
 
 ## Feature Flags
 
-Позволяет включать и выключать функциональность в приложении.
-
-Эндпоинты:
-
 ```
-
-GET /feature-flags
+GET  /feature-flags
 POST /feature-flags
-GET /feature-flags/{id}
+GET  /feature-flags/{id}
 POST /feature-flags/{id}/enable
 POST /feature-flags/{id}/disable
-
 ```
 
 Пример feature flag:
@@ -336,91 +403,22 @@ POST /feature-flags/{id}/disable
 
 # Запуск приложения
 
-Запуск сервера:
-
-```
-
+```bash
 ./gradlew bootRun
-
-```
-
-Сервис будет доступен по адресу:
-
-```
-
-http://localhost:8080
-
 ```
 
 Swagger UI:
 
 ```
-
 http://localhost:8080/swagger-ui.html
-
 ```
 
 ---
 
 # Swagger UI
 
-API автоматически документируется через Swagger.
-
 ### Experiments API
-
 ![Experiments](screenshots/experiments.png)
 
 ### Feature Flags API
-
 ![FeatureFlags](screenshots/featureflags.png)
-
----
-
-# Пример использования
-
-Создание эксперимента:
-
-```
-
-POST /experiments
-
-```
-
-Запуск эксперимента:
-
-```
-
-POST /experiments/{id}/start
-
-```
-
-Получение варианта для пользователя:
-
-```
-
-GET /experiments/{id}/assign
-
-```
-
-Включение feature flag:
-
-```
-
-POST /feature-flags/{id}/enable
-
-```
-
----
-
-# Примечание
-
-В данной реализации используется **in-memory хранение данных** (в памяти приложения).
-
-Основная цель работы — продемонстрировать:
-
-* подход API-first
-* использование OpenAPI
-* генерацию кода через OpenAPI Generator
-* проектирование REST API
-
-```
