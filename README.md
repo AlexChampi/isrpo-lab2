@@ -84,14 +84,6 @@ docker-compose up --build
 
 ## Дашборд трассировки в Grafana
 
-Панели:
-1. **Service Map** — граф зависимостей сервисов
-2. **Trace Search** — поиск трейсов по TraceQL
-3. **Slow Traces** — трейсы длительностью > 100ms
-4. **Span Rate** — количество спанов в секунду
-5. **Span Duration p95** — перцентили длительности
-6. **Error Spans** — ошибочные спаны
-
 ### Все трейсы
 ![all_traces.png](screenshots/all_traces.png)
 
