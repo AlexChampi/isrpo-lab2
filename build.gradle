@@ -31,8 +31,16 @@ dependencies {
     implementation 'io.micrometer:micrometer-registry-prometheus'
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.2'
 
-    // Loki — отправка логов напрямую из приложения
+    // Loki
     implementation 'com.github.loki4j:loki-logback-appender:1.5.2'
+
+    // ── Distributed Tracing ────────────────────────────────────────────
+    // Micrometer Tracing (bridge к OpenTelemetry)
+    implementation 'io.micrometer:micrometer-tracing-bridge-otel'
+    // OTLP-экспортёр — шлёт трейсы в Tempo
+    implementation 'io.opentelemetry:opentelemetry-exporter-otlp'
+    // Propagation через HTTP-заголовки (W3C TraceContext)
+    implementation 'io.opentelemetry:opentelemetry-extension-trace-propagators'
 
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
